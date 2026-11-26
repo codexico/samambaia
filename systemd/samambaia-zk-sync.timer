@@ -1,0 +1,10 @@
+[Unit]
+Description=Automatic Zettelkasten Sync Timer for Samambaia
+
+[Timer]
+OnBootSec=90s
+OnUnitActiveSec=10min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

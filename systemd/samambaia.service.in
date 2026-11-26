@@ -1,0 +1,15 @@
+[Unit]
+Description=Samambaia Local AI Coordinator Daemon (Antigravity SDK + Podman Ollama + Open WebUI)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=__PROJECT_DIR__
+ExecStartPre=-/usr/bin/podman start ollama
+ExecStartPre=-/usr/bin/podman start open-webui
+ExecStart=__PROJECT_DIR__/.venv/bin/samambaia-daemon
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

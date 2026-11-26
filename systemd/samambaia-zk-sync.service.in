@@ -1,0 +1,8 @@
+[Unit]
+Description=Samambaia Incremental Zettelkasten Sync (~/zk -> Open WebUI #zk)
+After=samambaia.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=__PROJECT_DIR__
+ExecStart=__PROJECT_DIR__/.venv/bin/samambaia --sync-zk

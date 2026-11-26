@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Samambaia: Translate or Explain Selection
+Comment=Translates or explains the selected screen text locally (Meta+Alt+T)
+Exec=__PROJECT_DIR__/bin/samambaia-selection-translate
+Icon=__PROJECT_DIR__/assets/samambaia.svg
+Terminal=false
+NoDisplay=true
+Categories=Utility;
+X-KDE-Shortcuts=Meta+Alt+T

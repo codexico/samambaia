@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#06281e"/>
+      <stop offset="100%" stop-color="#0f3d2e"/>
+    </linearGradient>
+    <linearGradient id="frond" x1="15%" y1="90%" x2="85%" y2="10%">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#86efac"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="112" height="112" rx="26" fill="url(#bg)" stroke="#1f6f54" stroke-width="3"/>
+  <!-- Central stem of the fern (samambaia) -->
+  <path d="M32 98 Q58 64 92 26" fill="none" stroke="url(#frond)" stroke-width="5" stroke-linecap="round"/>
+  <!-- Paired leaflets -->
+  <path d="M44 83 Q30 75 26 63 Q40 67 49 77 Z" fill="url(#frond)"/>
+  <path d="M47 80 Q61 85 73 79 Q62 71 51 75 Z" fill="url(#frond)"/>
+  <path d="M57 67 Q44 58 41 46 Q55 51 62 61 Z" fill="url(#frond)"/>
+  <path d="M60 64 Q75 68 86 62 Q75 54 64 59 Z" fill="url(#frond)"/>
+  <path d="M71 50 Q60 41 59 30 Q71 35 76 45 Z" fill="url(#frond)"/>
+  <path d="M74 47 Q87 50 97 44 Q87 38 77 43 Z" fill="url(#frond)"/>
+  <circle cx="94" cy="25" r="5" fill="#bbf7d0"/>
+</svg>

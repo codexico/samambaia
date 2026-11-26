@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Samambaia (Open WebUI)
+GenericName=Local AI Coordinator
+Comment=Opens the Samambaia local AI interface in your browser
+Exec=xdg-open http://samambaia.localhost:8080
+Icon=__PROJECT_DIR__/assets/samambaia.svg
+Terminal=false
+Categories=Development;Utility;ArtificialIntelligence;
+Keywords=samambaia;aaaia;ai;ia;chat;gemma;qwen;openwebui;local;
+StartupNotify=true
