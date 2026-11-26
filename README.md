@@ -27,7 +27,7 @@ On machines with limited GPU VRAM paired with abundant system RAM, large dense m
 | **`terminal` & `pr_review`** | [`gemma4:26b`](https://ollama.com/library/gemma4) | 4B (MoE) | Rock-solid native tool calling and file/diff inspection at 4B decoding speeds without long thinking delays. |
 | **`coding` & `deep`** | [`qwen3.5:35b-a3b`](https://ollama.com/library/qwen3.5) | 3B (MoE + Thinking) | Top-tier extended reasoning (*thinking*) for code and architecture while maintaining ~14–18 tokens/s in system RAM thanks to 3B active parameters. |
 
-> Every profile is configurable via ordered fallback lists: to swap in smaller, larger, or alternative [Ollama](https://ollama.com/search) models, simply edit `model_preferences`.
+> All models are configurable: to swap in smaller, larger, or alternative [Ollama](https://ollama.com/search) models, simply edit `model_preferences`.
 
 ### Other customizable settings
 

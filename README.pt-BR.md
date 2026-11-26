@@ -27,11 +27,11 @@ Em máquinas com VRAM limitada e bastante RAM no sistema, modelos densos grandes
 | **`terminal` & `pr_review`** | [`gemma4:26b`](https://ollama.com/library/gemma4) | 4B (MoE) | Excelente estabilidade em *tool calling* nativo e leitura de arquivos/diffs com velocidade de modelo leve e sem atraso de *thinking* longo. |
 | **`coding` & `deep`** | [`qwen3.5:35b-a3b`](https://ollama.com/library/qwen3.5) | 3B (MoE + Thinking) | Raciocínio estendido (*thinking*) de ponta em código e arquitetura mantendo ~14–18 tokens/s na RAM por ativar apenas 3B parâmetros por token. |
 
-> Todos os modelos são configuráveis por lista de preferência/fallback: se você preferir modelos menores, maiores ou de outras famílias no [Ollama](https://ollama.com/search), basta alterar `model_preferences`.
+> Todos os modelos são configuráveis: se você preferir modelos menores, maiores ou de outras famílias no [Ollama](https://ollama.com/search), basta alterar `model_preferences`.
 
 ### Outras configurações que podem ser alteradas
 
-Nada fica engessado no código. Rode `aaaia --init-config` para gerar seu arquivo pessoal em `~/.config/samambaia/config.json` (baseado em [`config.example.json`](config.example.json)) e `aaaia --config` para inspecionar a configuração ativa:
+Rode `aaaia --init-config` para gerar seu arquivo pessoal em `~/.config/samambaia/config.json` (baseado em [`config.example.json`](config.example.json)) e `aaaia --config` para inspecionar a configuração ativa:
 
 - **`model_preferences`:** lista ordenada de modelos para cada perfil (`router`, `direct`, `terminal`, `pr_review`, `coding` e `deep`).
 - **`inference`:** troca/descarregamento automático de VRAM (`unload_other_models_on_switch` — desative se tiver GPU com 24 GB+ de VRAM), tempo em memória (`router_keep_alive`), janelas de contexto (`router_num_ctx`, `direct_num_ctx`), temperatura, limite de compactação de histórico (`compaction_tokens`) e timeouts.
@@ -43,7 +43,7 @@ Nada fica engessado no código. Rode `aaaia --init-config` para gerar seu arquiv
 
 ## ✨ Principais Recursos
 
-- **Roteamento Cooperativo em 2 Estágios (Consciente de VRAM):**
+- **Roteamento em 2 Estágios (Consciente de VRAM):**
   - **Estágio 1 (`router` & `direct` → `gemma4:e4b`):** Classifica o pedido em milissegundos via gramática JSON nativa do [Ollama](https://ollama.com/) e faz streaming imediato de traduções/respostas rápidas (`think=False`, sem overhead de subprocesso).
   - **Estágio 2 (`terminal`, `pr_review`, `coding`, `deep`):** Descarrega automaticamente modelos ociosos antes de subir especialistas maiores (evitando disputa por VRAM) e executa um `Agent` do [Google Antigravity SDK](https://github.com/google-antigravity/antigravity-sdk-python) restrito à pasta atual (`$PWD`) com políticas de segurança declarativas.
 - **Aviso Interativo para Tarefas Pesadas & Fila "Deixar para Depois":**
