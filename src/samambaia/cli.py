@@ -484,7 +484,7 @@ def main() -> None:
     prog = _invoked_prog()
     parser = argparse.ArgumentParser(
         prog=prog,
-        description="Samambaia (samambAIA / aaaia) — Cooperative Local AI Agent Coordinator",
+        description="samambaia (samambaia / aaaia) — Local AI Agent Coordinator",
     )
     parser.add_argument(
         "prompt",

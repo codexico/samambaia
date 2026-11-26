@@ -2,11 +2,11 @@
   <img src="assets/samambaia-header.png" width="280" alt="Samambaia-de-metro in xaxim planter" />
 </p>
 
-<h1 align="center">samambAIA (<code>samambaia</code> / <code>aaaia</code>)</h1>
+<h1 align="center">samambaia (<code>samambaia</code> / <code>aaaia</code>)</h1>
 
 <p align="center">
   <em>"From each tool and model according to its ability, to each task according to its need."</em><br/>
-  <strong>🇧🇷 <a href="README.pt-BR.md">Leia a documentação em Português (BR)</a></strong>
+  <strong><a href="README.pt-BR.md">Leia a documentação em Português (BR)</a></strong>
 </p>
 
 ---
@@ -31,9 +31,9 @@ On machines with limited GPU VRAM paired with abundant system RAM, large dense m
 
 ### Other customizable settings
 
-Nothing is hardcoded. Run `aaaia --init-config` to generate your personal `~/.config/samambaia/config.json` (modeled after [`config.example.json`](config.example.json)) and `aaaia --config` to inspect the active merged configuration:
+Run `aaaia --init-config` to generate your personal `~/.config/samambaia/config.json` (modeled after [`config.example.json`](config.example.json)) and `aaaia --config` to inspect the active merged configuration:
 
-- **`model_preferences`:** ordered fallback model lists for each profile (`router`, `direct`, `terminal`, `pr_review`, `coding`, and `deep`).
+- **`model_preferences`:** ordered model lists for each profile (`router`, `direct`, `terminal`, `pr_review`, `coding`, and `deep`).
 - **`inference`:** automatic VRAM unloading on model switch (`unload_other_models_on_switch` — set `false` on 24 GB+ GPUs), memory residency (`router_keep_alive`), context windows (`router_num_ctx`, `direct_num_ctx`), temperature, context compaction threshold (`compaction_tokens`), and timeouts.
 - **`guard`:** profiles that always prompt for confirmation (`always_confirm_tiers`, default `["deep"]`), heavy model substring patterns (`heavy_model_patterns`, e.g., `35b`, `32b`), and blocked destructive shell patterns (`dangerous_command_patterns`).
 - **`limits`:** maximum stored turns per session (`max_session_turns`), history context char cap, safe truncation caps for `git diff`, GitHub PR diffs, and webpages, plus default web search result count.
@@ -43,7 +43,7 @@ Nothing is hardcoded. Run `aaaia --init-config` to generate your personal `~/.co
 
 ## ✨ Highlights
 
-- **Two-Stage Cooperative Routing (VRAM-Aware):**
+- **Two-Stage Routing (VRAM-Aware):**
   - **Stage 1 (`router` & `direct` → `gemma4:e4b`):** Classifies intent in milliseconds via [Ollama](https://ollama.com/)'s native JSON-schema grammar and streams translations/quick answers immediately (`think=False`, zero subprocess overhead).
   - **Stage 2 (`terminal`, `pr_review`, `coding`, `deep`):** Automatically unloads idle models before loading larger specialists (preventing VRAM contention) and runs a workspace-scoped [Google Antigravity SDK](https://github.com/google-antigravity/antigravity-sdk-python) `Agent` (`$PWD`) with declarative safety policies.
 - **Interactive Heavy-Task Guard & "Save for Later" Queue:**
@@ -107,7 +107,7 @@ uv sync
 bash scripts/install.sh
 ```
 
-Personal overrides live in `~/.config/samambaia/config.json` (`aaaia --init-config`), keeping the repository clean of local paths or preferences. *(Zettelkasten users can pass `bash scripts/install.sh --with-zk` or enable `zettelkasten.enabled` in config).*
+Personal overrides live in `~/.config/samambaia/config.json` (`aaaia --init-config`), keeping the repository clean of local paths or preferences.
 
 ## 💻 CLI Usage (`samambaia` or `aaaia`)
 
@@ -141,11 +141,20 @@ aaaia "Review PR #42"
 aaaia --later
 aaaia --run-later
 aaaia --drop-later 1
+
+# Tasks where the agent itself opens pages, reads the DOM, or inspects the browser console
+
+# Firefox via Playwright MCP
+aaaia --browser-mcp firefox "Open https://example.com in Firefox and report the page title and links"
+
+# Chrome / Chromium via Chrome DevTools MCP
+aaaia --browser-mcp chrome "Inspect the active Chrome tab and check for console errors"
 ```
 
 ## 🌐 Browser Usage (Open WebUI & MCP Automation)
 
 ### 1. Full Web Interface ([Open WebUI](https://github.com/open-webui/open-webui))
+
 Open **`http://samambaia.localhost:8080`** in Firefox or Chrome (or press `Super`, type `samambaia`, and hit `Enter`):
 
 - **Automatic routing in chat:** with the default **`samambaia-auto`** model selected, you get persistent multi-turn conversations, file attachments, local voice dictation (Whisper), and web search.
@@ -157,6 +166,7 @@ Open **`http://samambaia.localhost:8080`** in Firefox or Chrome (or press `Super
 - **Direct specialist profiles:** you can also pick `samambaia-pr-review`, `samambaia-terminal`, `samambaia-coding`, `samambaia-deep`, `samambaia-browser-firefox`, or `samambaia-browser-chrome` directly from Open WebUI's model dropdown.
 
 ### 2. Agent Controlling or Inspecting Firefox / Chrome (MCP)
+
 When you want the agent itself to open pages, inspect the DOM, or check browser console logs:
 
 ```bash

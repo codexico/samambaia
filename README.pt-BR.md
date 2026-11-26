@@ -2,11 +2,11 @@
   <img src="assets/samambaia-header.png" width="280" alt="Samambaia-de-metro no xaxim" />
 </p>
 
-<h1 align="center">samambAIA (<code>samambaia</code> / <code>aaaia</code>)</h1>
+<h1 align="center">samambaia (<code>samambaia</code> / <code>aaaia</code>)</h1>
 
 <p align="center">
   <em>"De cada ferramenta e modelo segundo sua capacidade, a cada tarefa segundo sua necessidade."</em><br/>
-  <strong>🇺🇸 <a href="README.md">Read the documentation in English</a></strong>
+  <strong><a href="README.md">Read the documentation in English</a></strong>
 </p>
 
 ---
@@ -47,7 +47,7 @@ Rode `aaaia --init-config` para gerar seu arquivo pessoal em `~/.config/samambai
   - **Estágio 1 (`router` & `direct` → `gemma4:e4b`):** Classifica o pedido em milissegundos via gramática JSON nativa do [Ollama](https://ollama.com/) e faz streaming imediato de traduções/respostas rápidas (`think=False`, sem overhead de subprocesso).
   - **Estágio 2 (`terminal`, `pr_review`, `coding`, `deep`):** Descarrega automaticamente modelos ociosos antes de subir especialistas maiores (evitando disputa por VRAM) e executa um `Agent` do [Google Antigravity SDK](https://github.com/google-antigravity/antigravity-sdk-python) restrito à pasta atual (`$PWD`) com políticas de segurança declarativas.
 - **Aviso Interativo para Tarefas Pesadas & Fila "Deixar para Depois":**
-  - Sempre que uma tarefa cai no perfil `deep`, exige carregar a frio o modelo de ~21 GB (`qwen3.5:35b-a3b`) ou envolve múltiplos passos longos, o Samambaia avisa **antes** de alocar RAM/VRAM: **`[C]` Continuar**, **`[D]` Deixar para depois** ou **`[X]` Cancelar** — tanto no terminal quanto nos balões de chat do [Open WebUI](https://github.com/open-webui/open-webui)!
+  - Sempre que uma tarefa cai no perfil `deep`, exige carregar a frio o modelo de ~21 GB (`qwen3.5:35b-a3b`) ou envolve múltiplos passos longos, a Samambaia avisa **antes** de alocar RAM/VRAM: **`[C]` Continuar**, **`[D]` Deixar para depois** ou **`[X]` Cancelar** — tanto no terminal quanto nos balões de chat do [Open WebUI](https://github.com/open-webui/open-webui)!
 - **Ferramentas Integradas:**
   - **Busca na Web & Leitura Limpa de URLs:** `web_search` ([`ddgs`](https://pypi.org/project/ddgs/) / DuckDuckGo) e `read_webpage` ([BeautifulSoup](https://www.crummy.com/software/BeautifulSoup/)).
   - **Code Review Somente-Leitura (Local e GitHub Remoto):** analisa `git_diff`, `git_status`, `git_log` locais ou PRs remotos pelo número (`gh_pr_view`, `gh_pr_diff` via [GitHub CLI](https://cli.github.com/) ou API REST) sem trocar sua branch nem liberar escrita ou shell arbitrário.
@@ -68,7 +68,7 @@ uv sync
 bash scripts/install.sh
 ```
 
-Configurações pessoais ficam em `~/.config/samambaia/config.json` (`aaaia --init-config`), mantendo o repositório limpo de caminhos ou preferências locais. *(Para quem usa Zettelkasten, passe `bash scripts/install.sh --with-zk` ou ative `zettelkasten.enabled` no config).*
+Configurações pessoais ficam em `~/.config/samambaia/config.json` (`aaaia --init-config`), mantendo o repositório limpo de caminhos ou preferências locais.
 
 ## 💻 Uso no Terminal (`samambaia` ou `aaaia`)
 
@@ -102,11 +102,20 @@ aaaia "Revise o PR #42"
 aaaia --later
 aaaia --run-later
 aaaia --drop-later 1
+
+# Tarefas em que o próprio agente deve abrir páginas, ler o DOM ou inspecionar o console do navegador
+
+# Firefox via Playwright MCP
+aaaia --browser-mcp firefox "Abra https://example.com no Firefox e informe o título e os links da página"
+
+# Chrome / Chromium via Chrome DevTools MCP
+aaaia --browser-mcp chrome "Inspecione a aba ativa no Chrome e verifique se há erros no console"
 ```
 
 ## 🌐 Uso pelo Navegador (Open WebUI & Automação MCP)
 
 ### 1. Interface Web Completa ([Open WebUI](https://github.com/open-webui/open-webui))
+
 Abra **`http://samambaia.localhost:8080`** no Firefox ou Chrome (ou aperte a tecla `Super`, digite `samambaia` e tecle `Enter`):
 
 - **Roteamento automático no chat:** com o modelo padrão **`samambaia-auto`** selecionado, você tem histórico completo de conversas longas, upload de arquivos, ditado por voz local (Whisper) e busca na web.
@@ -114,10 +123,11 @@ Abra **`http://samambaia.localhost:8080`** no Firefox ou Chrome (ou aperte a tec
   ```text
   cwd:~/projs/meu-app Faça um code review das alterações atuais desta branch
   ```
-- **Confirmação interativa no próprio chat:** se o pedido exigir o perfil `deep` (`qwen3.5:35b-a3b`), o Samambaia responde imediatamente com um card de aviso — basta enviar **`c`** para continuar na hora, **`d`** para guardar na fila (`!later` lista a fila no chat) ou **`x`** para cancelar.
+- **Confirmação interativa no próprio chat:** se o pedido exigir o perfil `deep` (`qwen3.5:35b-a3b`), a Samambaia responde imediatamente com um card de aviso — basta enviar **`c`** para continuar na hora, **`d`** para guardar na fila (`!later` lista a fila no chat) ou **`x`** para cancelar.
 - **Perfis diretos no seletor de modelos:** você também pode escolher `samambaia-pr-review`, `samambaia-terminal`, `samambaia-coding`, `samambaia-deep`, `samambaia-browser-firefox` ou `samambaia-browser-chrome`.
 
 ### 2. Agente controlando ou inspecionando o Firefox / Chrome (MCP)
+
 Para tarefas em que o próprio agente deve abrir páginas, ler o DOM ou inspecionar o console do navegador:
 
 ```bash
