@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/samambaia-header.png" width="260" alt="Samambaia-de-metro" />
+  <img src="assets/samambaia-header.png" width="280" alt="Samambaia-de-metro no xaxim" />
 </p>
 
 <h1 align="center">samambAIA (<code>samambaia</code> / <code>aaaia</code>)</h1>
