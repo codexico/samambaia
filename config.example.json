@@ -1,0 +1,33 @@
+{
+  "ollama_host": "http://localhost:11434",
+  "openwebui_url": "http://127.0.0.1:8080",
+  "public_webui_url": "http://samambaia.localhost:8080",
+  "daemon_host": "127.0.0.1",
+  "daemon_port": 8765,
+  "compaction_tokens": 24576,
+  "zk_todo_file": "TODO.md",
+  "model_preferences": {
+    "router": [
+      "gemma4:e4b",
+      "gemma4:26b"
+    ],
+    "terminal": [
+      "gemma4:26b",
+      "gemma4:e4b"
+    ],
+    "pr_review": [
+      "gemma4:26b",
+      "qwen3.5:35b-a3b",
+      "gemma4:e4b"
+    ],
+    "coding": [
+      "qwen3.5:35b-a3b",
+      "gemma4:26b",
+      "gemma4:e4b"
+    ],
+    "deep": [
+      "qwen3.5:35b-a3b",
+      "gemma4:26b"
+    ]
+  }
+}

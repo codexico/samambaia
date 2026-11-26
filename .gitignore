@@ -1,0 +1,21 @@
+# Byte-compiled / virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+dist/
+build/
+*.egg-info/
+
+# Local runtime state & personal configurations
+.state/
+.env
+config.local.json
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
