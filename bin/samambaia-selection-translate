@@ -3,8 +3,13 @@
 set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
-ICON="$PROJECT_DIR/assets/samambaia.svg"
+ICON="$PROJECT_DIR/assets/samambaia-icon.png"
 CLI_BIN="$PROJECT_DIR/.venv/bin/samambaia"
+PY_BIN="$PROJECT_DIR/.venv/bin/python"
+
+readarray -t CFG_VALS < <("$PY_BIN" -c 'from samambaia.config import load_config; c = load_config(); print(c.default_language); print(c.kde_selection_shortcut)' 2>/dev/null || printf 'Português do Brasil\nMeta+Alt+T\n')
+TARGET_LANG="${CFG_VALS[0]:-Português do Brasil}"
+SHORTCUT_LABEL="${CFG_VALS[1]:-Meta+Alt+T}"
 
 TEXT="$(wl-paste --primary --no-newline 2>/dev/null || true)"
 if [[ -z "${TEXT// }" ]]; then
@@ -12,13 +17,13 @@ if [[ -z "${TEXT// }" ]]; then
 fi
 
 if [[ -z "${TEXT// }" ]]; then
-  notify-send -a "Samambaia" -i "$ICON" -t 4000 "Samambaia (Meta+Alt+T)" "Nenhum texto selecionado na tela ou na área de transferência."
+  notify-send -a "Samambaia" -i "$ICON" -t 4000 "Samambaia ($SHORTCUT_LABEL)" "Nenhum texto selecionado na tela ou na área de transferência."
   exit 0
 fi
 
 notify-send -a "Samambaia" -i "$ICON" -t 2500 "Samambaia" "⏳ Processando seleção..."
 
-PROMPT="Se o texto abaixo estiver em inglês ou outro idioma estrangeiro, traduza-o de forma natural e precisa para Português do Brasil (entregue apenas a tradução). Se já estiver em Português, explique ou resuma em até 3 frases diretas:"
+PROMPT="Se o texto abaixo estiver em outro idioma diferente de ${TARGET_LANG}, traduza-o de forma natural e precisa para ${TARGET_LANG} (entregue apenas a tradução). Se já estiver em ${TARGET_LANG}, explique ou resuma em até 3 frases diretas:"
 
 RESULT="$(printf '%s' "$TEXT" | "$CLI_BIN" -t direct -y -q "$PROMPT" 2>/dev/null || true)"
 
