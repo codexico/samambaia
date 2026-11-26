@@ -177,6 +177,32 @@ aaaia --browser-mcp firefox "Open https://example.com in Firefox and report the 
 aaaia --browser-mcp chrome "Inspect the active Chrome tab and check for console errors"
 ```
 
+## 🤝 Contributing
+
+Contributions are very welcome — especially to expand Samambaia across more Linux desktop environments and hardware setups! Great areas to jump in:
+
+- **Other desktop environments & Wayland compositors:** global selection-translation shortcut integration for [GNOME](https://www.gnome.org/), [Hyprland](https://hyprland.org/), [Sway](https://swaywm.org/), COSMIC, XFCE, etc.
+- **Container runtimes & GPU backends:** out-of-the-box support for [Docker](https://www.docker.com/) alongside Podman, AMD ROCm, Intel GPUs, or CPU-only model profiles.
+- **Optional integrations:** self-contained opt-in modules under [`src/samambaia/integrations/`](src/samambaia/integrations/) (disabled by default, enabled via `config.json`).
+- **Bug fixes, automated tests, and documentation improvements.**
+
+### Pull Request Workflow
+
+1. Fork the repository and create a descriptive feature branch:
+   ```bash
+   git checkout -b feat/my-improvement
+   ```
+2. Set up the local development environment with [`uv`](https://docs.astral.sh/uv/) and verify syntax:
+   ```bash
+   uv sync
+   uv run python -m compileall src/
+   ```
+3. **Project guidelines:**
+   - Keep new parameters configurable in [`src/samambaia/config.py`](src/samambaia/config.py) and documented in [`config.example.json`](config.example.json) (never hardcode personal local paths).
+   - When adding or changing flags or settings, update both [`README.md`](README.md) and [`README.pt-BR.md`](README.pt-BR.md).
+   - Use semantic commit messages ([Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `docs:`, `refactor:`).
+4. Open a Pull Request describing what changed and how you tested it. By submitting a contribution, you agree that it will be licensed under the project's [`LICENSE`](LICENSE) and [`EULA`](EULA).
+
 ## 📜 License & EULA
 
 - Licensed under the **Open Software License v. 3.0 (OSL-3.0)** — see [`LICENSE`](LICENSE).

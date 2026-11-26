@@ -138,6 +138,32 @@ aaaia --browser-mcp firefox "Abra https://example.com no Firefox e informe o tí
 aaaia --browser-mcp chrome "Inspecione a aba ativa no Chrome e verifique se há erros no console"
 ```
 
+## 🤝 Como Contribuir
+
+Contribuições são muito bem-vindas — especialmente para expandir o alcance da Samambaia em diferentes ambientes Linux e hardwares! Algumas frentes abertas:
+
+- **Outros ambientes gráficos e compositores:** suporte ao atalho global de seleção de texto no [GNOME](https://www.gnome.org/), [Hyprland](https://hyprland.org/), [Sway](https://swaywm.org/), COSMIC, XFCE etc.
+- **Outros motores de containers e GPUs:** suporte automático a [Docker](https://www.docker.com/) (além do Podman), GPUs AMD (ROCm), Intel ou perfis somente-CPU.
+- **Novas integrações opcionais:** módulos desacoplados em [`src/samambaia/integrations/`](src/samambaia/integrations/) (desativados por padrão no núcleo, ativáveis via `config.json`).
+- **Correções de bugs, testes e documentação.**
+
+### Fluxo para enviar um Pull Request
+
+1. Faça um *fork* do repositório e crie uma branch para sua alteração:
+   ```bash
+   git checkout -b feat/minha-melhoria
+   ```
+2. Configure o ambiente local com [`uv`](https://docs.astral.sh/uv/) e valide a sintaxe:
+   ```bash
+   uv sync
+   uv run python -m compileall src/
+   ```
+3. **Diretrizes do projeto:**
+   - Mantenha novos parâmetros configuráveis em [`src/samambaia/config.py`](src/samambaia/config.py) e documentados em [`config.example.json`](config.example.json) (nunca inclua caminhos pessoais no código).
+   - Se alterar opções ou comandos, atualize tanto o [`README.pt-BR.md`](README.pt-BR.md) quanto o [`README.md`](README.md).
+   - Utilize commits semânticos ([Conventional Commits](https://www.conventionalcommits.org/pt-br/): `feat:`, `fix:`, `docs:`, `refactor:`).
+4. Abra um Pull Request descrevendo o que mudou e como foi testado. Ao contribuir, você concorda que sua contribuição será distribuída sob os mesmos termos de [`LICENSE`](LICENSE) e [`EULA`](EULA).
+
 ## 📜 Licença & EULA
 
 - Licenciado sob a **Open Software License v. 3.0 (OSL-3.0)** — veja [`LICENSE`](LICENSE).
