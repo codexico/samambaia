@@ -12,7 +12,7 @@ from typing import Any
 
 import httpx
 
-from samambaia.config import load_config
+from samambaia.config import USER_CONFIG_PATH, init_user_config, load_config
 from samambaia.coordinator import BrowserMcpType, execute_coordinated_turn, plan_turn
 from samambaia.deferred import (
     add_deferred_task,
@@ -563,9 +563,19 @@ def main() -> None:
         help="Removes a deferred task by ID.",
     )
     parser.add_argument(
+        "--config",
+        action="store_true",
+        help="Displays the active merged configuration and user config path.",
+    )
+    parser.add_argument(
+        "--init-config",
+        action="store_true",
+        help="Creates ~/.config/samambaia/config.json with all customizable defaults.",
+    )
+    parser.add_argument(
         "--sync-zk",
         action="store_true",
-        help="Incrementally syncs ~/zk notes into Open WebUI's '#zk' Knowledge collection.",
+        help="(Optional) Syncs Zettelkasten notes into Open WebUI Knowledge collection.",
     )
     args = parser.parse_args()
 
@@ -573,10 +583,18 @@ def main() -> None:
     daemon_url = f"http://{cfg.daemon_host}:{cfg.daemon_port}"
     cwd = os.getcwd()
 
+    if args.init_config:
+        path = init_user_config(force=False)
+        print(f"{GREEN}✔ Arquivo de configuração pronto em:{RESET} {path}")
+        sys.exit(0)
+    if args.config:
+        print(f"{CYAN}# User config path:{RESET} {USER_CONFIG_PATH}")
+        print(json.dumps(cfg.model_dump(), ensure_ascii=False, indent=2))
+        sys.exit(0)
     if args.status:
         sys.exit(_print_status(daemon_url, prog))
     if args.sync_zk:
-        from samambaia.zk_sync import sync_zk_to_openwebui
+        from samambaia.integrations.zk_sync import sync_zk_to_openwebui
 
         sys.exit(sync_zk_to_openwebui())
     if args.later:

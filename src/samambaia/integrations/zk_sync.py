@@ -1,4 +1,4 @@
-"""Incremental SHA-256 synchronizer mirroring ~/zk notes into Open WebUI's '#zk' Knowledge base."""
+"""Optional incremental SHA-256 synchronizer mirroring Zettelkasten notes into Open WebUI Knowledge."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from typing import Any
 import httpx
 
 from samambaia.config import STATE_DIR, load_config
-from samambaia.zk_tools import get_zk_dir
+from samambaia.integrations.zk import get_zk_dir
 
 SYNC_STATE_FILE = STATE_DIR / "zk_openwebui_sync.json"
 
@@ -48,10 +48,11 @@ def _get_openwebui_token(client: httpx.Client, base_url: str) -> str:
     return resp.json()["token"]
 
 
-def _get_or_create_zk_kb(
+def _get_or_create_kb(
     client: httpx.Client,
     base_url: str,
     headers: dict[str, str],
+    kb_name: str,
     cached_id: str | None,
 ) -> str:
     resp = client.get(f"{base_url}/api/v1/knowledge/", headers=headers)
@@ -59,25 +60,33 @@ def _get_or_create_zk_kb(
     data = resp.json()
     items = data.get("items", data) if isinstance(data, dict) else data
     for kb in items:
-        if kb.get("id") == cached_id or (kb.get("name") or "").lower() == "zk":
+        if kb.get("id") == cached_id or (kb.get("name") or "").lower() == kb_name.lower():
             return kb["id"]
 
     create_resp = client.post(
         f"{base_url}/api/v1/knowledge/create",
         headers=headers,
         json={
-            "name": "zk",
-            "description": "Zettelkasten notes (~/zk) automatically synced by Samambaia",
+            "name": kb_name,
+            "description": f"Markdown notes ({kb_name}) automatically synced by Samambaia",
         },
     )
     create_resp.raise_for_status()
     return create_resp.json()["id"]
 
 
-def sync_zk_to_openwebui() -> int:
+def sync_zk_to_openwebui(*, force_when_disabled: bool = False) -> int:
     cfg = load_config()
+    if not cfg.zettelkasten.enabled and not force_when_disabled:
+        print(
+            "Integração Zettelkasten desativada na configuração "
+            "(ative 'zettelkasten.enabled: true' em ~/.config/samambaia/config.json)."
+        )
+        return 0
+
     base_url = cfg.openwebui_url.rstrip("/")
-    zk_root = get_zk_dir()
+    kb_name = cfg.zettelkasten.openwebui_collection_name
+    zk_root = get_zk_dir(cfg)
     if not zk_root.is_dir():
         print(f"Diretório {zk_root} não encontrado.")
         return 1
@@ -116,7 +125,7 @@ def sync_zk_to_openwebui() -> int:
     with httpx.Client(timeout=120.0) as client:
         token = _get_openwebui_token(client, base_url)
         headers = {"Authorization": f"Bearer {token}"}
-        kb_id = _get_or_create_zk_kb(client, base_url, headers, state.get("kb_id"))
+        kb_id = _get_or_create_kb(client, base_url, headers, kb_name, state.get("kb_id"))
         state["kb_id"] = kb_id
 
         for rel_key in to_delete:
@@ -176,7 +185,7 @@ def sync_zk_to_openwebui() -> int:
 
     _save_sync_state(state)
     print(
-        f"✔ Sincronização '#zk' concluída! "
+        f"✔ Sincronização '#{kb_name}' concluída! "
         f"(Novas: {added} | Atualizadas: {updated} | Removidas: {removed} | Total ativas: {len(tracked)})"
     )
     return 0

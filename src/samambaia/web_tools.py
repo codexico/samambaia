@@ -1,4 +1,4 @@
-"""Web search (DDGS) and clean webpage reader tools for local specialist agents."""
+"""Web search (DDGS) and clean webpage reader tools with configurable limits."""
 
 from __future__ import annotations
 
@@ -9,14 +9,20 @@ import bs4
 import httpx
 from ddgs import DDGS
 
+from samambaia.config import AssistantConfig, load_config
 
-def make_web_tools() -> list[Callable[..., Any]]:
-    def web_search(query: str, max_results: int = 5) -> str:
+
+def make_web_tools(cfg: AssistantConfig | None = None) -> list[Callable[..., Any]]:
+    active_cfg = cfg or load_config()
+    default_count = active_cfg.limits.web_search_default_results
+    max_page_chars = active_cfg.limits.max_webpage_chars
+
+    def web_search(query: str, max_results: int = default_count) -> str:
         """Searches the web for current documentation, articles, packages, and technical answers.
 
         Args:
             query: Concise search query.
-            max_results: Number of results to return (1 to 10, default 5).
+            max_results: Number of results to return (1 to 10).
         """
         limit = max(1, min(int(max_results), 10))
         try:
@@ -74,10 +80,10 @@ def make_web_tools() -> list[Callable[..., Any]]:
             text = main_node.get_text(separator="\n", strip=True)
             cleaned = re.sub(r"\n{3,}", "\n\n", text)
 
-        if len(cleaned) > 22000:
+        if len(cleaned) > max_page_chars:
             return (
-                cleaned[:22000]
-                + f"\n\n[... content from {url} truncated at 22k chars ...]"
+                cleaned[:max_page_chars]
+                + f"\n\n[... content from {url} truncated at {max_page_chars} chars ...]"
             )
         return cleaned or "(Page had no extractable text content.)"
 

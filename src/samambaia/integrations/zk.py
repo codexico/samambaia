@@ -1,4 +1,4 @@
-"""Markdown Zettelkasten (~/zk or $ZK_NOTEBOOK_DIR) search, reader, and TODO tools."""
+"""Optional Markdown Zettelkasten integration (enabled via `zettelkasten.enabled = true`)."""
 
 from __future__ import annotations
 
@@ -7,27 +7,28 @@ import os
 import pathlib
 from typing import Any, Callable
 
-from samambaia.config import load_config
+from samambaia.config import AssistantConfig, load_config
 
 
-def get_zk_dir() -> pathlib.Path:
-    env_dir = os.environ.get("ZK_NOTEBOOK_DIR")
-    if env_dir:
-        return pathlib.Path(env_dir).expanduser().resolve()
-    return (pathlib.Path.home() / "zk").resolve()
+def get_zk_dir(cfg: AssistantConfig | None = None) -> pathlib.Path:
+    active_cfg = cfg or load_config()
+    env_dir = os.environ.get("ZK_NOTEBOOK_DIR") or active_cfg.zettelkasten.directory
+    return pathlib.Path(env_dir).expanduser().resolve()
 
 
-def make_zk_tools() -> list[Callable[..., Any]]:
-    default_todo = os.environ.get("ZK_TODO_FILE") or load_config().zk_todo_file
+def make_zk_tools(cfg: AssistantConfig | None = None) -> list[Callable[..., Any]]:
+    active_cfg = cfg or load_config()
+    default_todo = os.environ.get("ZK_TODO_FILE") or active_cfg.zettelkasten.todo_file
+    max_chars = active_cfg.zettelkasten.max_note_chars
 
     def search_zk(query: str, max_results: int = 8) -> str:
-        """Searches Markdown notes inside the personal Zettelkasten directory (~/zk) by title or content.
+        """Searches Markdown notes inside the Zettelkasten directory by title or content.
 
         Args:
             query: Keyword or phrase to search.
             max_results: Maximum number of matching notes (1 to 20, default 8).
         """
-        zk_root = get_zk_dir()
+        zk_root = get_zk_dir(active_cfg)
         if not zk_root.is_dir():
             return f"Zettelkasten directory not found at {zk_root}."
 
@@ -76,12 +77,12 @@ def make_zk_tools() -> list[Callable[..., Any]]:
         return "\n".join(lines)
 
     def read_zk_note(note_path: str) -> str:
-        """Reads the full content of a specific Markdown note inside ~/zk.
+        """Reads the full content of a Markdown note inside the Zettelkasten directory.
 
         Args:
-            note_path: Relative path inside ~/zk or partial note filename.
+            note_path: Relative path inside Zettelkasten or partial note filename.
         """
-        zk_root = get_zk_dir()
+        zk_root = get_zk_dir(active_cfg)
         candidate = (zk_root / note_path).resolve()
         if not str(candidate).startswith(str(zk_root)):
             return "Access denied: path outside Zettelkasten root."
@@ -99,8 +100,8 @@ def make_zk_tools() -> list[Callable[..., Any]]:
             candidate = matches[0]
 
         text = candidate.read_text(encoding="utf-8", errors="replace")
-        if len(text) > 22000:
-            return text[:22000] + "\n\n[... note truncated at 22k chars ...]"
+        if len(text) > max_chars:
+            return text[:max_chars] + f"\n\n[... note truncated at {max_chars} chars ...]"
         return f"# File: {candidate.relative_to(zk_root)}\n\n{text}"
 
     def append_zk_todo(task_text: str, target_note: str = "") -> str:
@@ -108,9 +109,9 @@ def make_zk_tools() -> list[Callable[..., Any]]:
 
         Args:
             task_text: Description of the task or note to append.
-            target_note: Optional target Markdown filename inside ~/zk.
+            target_note: Optional target Markdown filename inside Zettelkasten.
         """
-        zk_root = get_zk_dir()
+        zk_root = get_zk_dir(active_cfg)
         if not zk_root.is_dir():
             return f"Directory {zk_root} does not exist."
 

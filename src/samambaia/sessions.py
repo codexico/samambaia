@@ -1,4 +1,4 @@
-"""Multi-turn conversation persistence per working directory for CLI (-c / --chat)."""
+"""Multi-turn conversation persistence per working directory with configurable limits."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ import pathlib
 import uuid
 from typing import Any
 
-from samambaia.config import STATE_DIR
+from samambaia.config import STATE_DIR, load_config
 
 SESSIONS_DIR = STATE_DIR / "chat_sessions"
 
@@ -69,6 +69,7 @@ def append_turn(
     task_type: str = "",
     model: str = "",
 ) -> None:
+    max_turns = load_config().limits.max_session_turns
     SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
     path = _session_path(session_id)
     if path.exists():
@@ -89,18 +90,19 @@ def append_turn(
             "model": model,
         }
     )
-    if len(turns) > 20:
-        data["turns"] = turns[-20:]
+    if len(turns) > max_turns:
+        data["turns"] = turns[-max_turns:]
 
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     _cwd_index_path(cwd).write_text(session_id, encoding="utf-8")
 
 
 def format_history_context(
-    turns: list[dict[str, str]], *, max_chars: int = 12000
+    turns: list[dict[str, str]], *, max_chars: int | None = None
 ) -> str:
     if not turns:
         return ""
+    limit = max_chars if max_chars is not None else load_config().limits.max_history_chars
     chunks: list[str] = []
     total = 0
     for t in reversed(turns[-10:]):
@@ -109,7 +111,7 @@ def format_history_context(
         if len(a) > 2500:
             a = a[:2500] + " [...]"
         entry = f"Usuário: {u}\nAssistente: {a}"
-        if total + len(entry) > max_chars and chunks:
+        if total + len(entry) > limit and chunks:
             break
         chunks.append(entry)
         total += len(entry)

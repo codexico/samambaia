@@ -5,8 +5,8 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=__PROJECT_DIR__
-ExecStartPre=-/usr/bin/podman start ollama
-ExecStartPre=-/usr/bin/podman start open-webui
+ExecStartPre=-/usr/bin/podman start __OLLAMA_CONTAINER__
+ExecStartPre=-/usr/bin/podman start __OPENWEBUI_CONTAINER__
 ExecStart=__PROJECT_DIR__/.venv/bin/samambaia-daemon
 Restart=on-failure
 RestartSec=3

@@ -33,23 +33,12 @@ from samambaia.config import (
     unload_model,
 )
 from samambaia.github_tools import make_github_pr_tools
+from samambaia.integrations.zk import make_zk_tools
 from samambaia.openai_bridge import temporary_bridge_server
 from samambaia.web_tools import make_web_tools
-from samambaia.zk_tools import make_zk_tools
 
 TaskType = Literal["direct", "terminal", "pr_review", "coding", "deep"]
 BrowserMcpType = Literal["chrome", "firefox"]
-
-DANGEROUS_PATTERNS = (
-    "rm -rf /",
-    "rm -fr /",
-    "mkfs",
-    "dd if=",
-    ":(){",
-    "chmod -R 777 /",
-    "> /dev/sd",
-    "> /dev/nvme",
-)
 
 
 class RouteDecision(pydantic.BaseModel):
@@ -58,14 +47,21 @@ class RouteDecision(pydantic.BaseModel):
     estimated_long: bool = False
 
 
-def _is_dangerous_command(args: dict[str, Any]) -> bool:
-    cmd = str(
-        args.get("CommandLine")
-        or args.get("command")
-        or args.get("cmd")
-        or ""
-    ).strip()
-    return any(pat in cmd for pat in DANGEROUS_PATTERNS)
+def _make_dangerous_command_predicate(
+    patterns: list[str],
+) -> Callable[[dict[str, Any]], bool]:
+    tuple_pats = tuple(patterns)
+
+    def _is_dangerous(args: dict[str, Any]) -> bool:
+        cmd = str(
+            args.get("CommandLine")
+            or args.get("command")
+            or args.get("cmd")
+            or ""
+        ).strip()
+        return any(pat in cmd for pat in tuple_pats)
+
+    return _is_dangerous
 
 
 def _find_npx_binary() -> str:
@@ -86,6 +82,7 @@ def _find_npx_binary() -> str:
 
 def make_browser_mcp_servers(
     browser_mcp: BrowserMcpType | None,
+    cfg: AssistantConfig,
 ) -> list[types.McpServerConfig]:
     if not browser_mcp:
         return []
@@ -100,7 +97,7 @@ def make_browser_mcp_servers(
             types.McpStdioServer(
                 name="chrome_devtools",
                 command=npx_bin,
-                args=["-y", "chrome-devtools-mcp@latest"],
+                args=list(cfg.features.chrome_mcp_args),
                 env=mcp_env,
             )
         ]
@@ -109,14 +106,16 @@ def make_browser_mcp_servers(
             types.McpStdioServer(
                 name="playwright_firefox",
                 command=npx_bin,
-                args=["-y", "@playwright/mcp@latest", "--browser", "firefox"],
+                args=list(cfg.features.firefox_mcp_args),
                 env=mcp_env,
             )
         ]
     return []
 
 
-def make_readonly_git_tools(cwd: str) -> list[Callable[..., Any]]:
+def make_readonly_git_tools(
+    cwd: str, max_diff_chars: int = 24000
+) -> list[Callable[..., Any]]:
     def git_status() -> str:
         """Returns the current Git branch and modified files in the repository."""
         res = subprocess.run(
@@ -142,10 +141,10 @@ def make_readonly_git_tools(cwd: str) -> list[Callable[..., Any]]:
             check=False,
         )
         out = res.stdout or res.stderr or "(no differences against target)"
-        if len(out) > 24000:
+        if len(out) > max_diff_chars:
             return (
-                out[:24000]
-                + "\n\n[... diff truncated at 24k chars; use view_file to inspect specific files ...]"
+                out[:max_diff_chars]
+                + f"\n\n[... diff truncated at {max_diff_chars} chars; use view_file to inspect specific files ...]"
             )
         return out
 
@@ -182,13 +181,20 @@ def _compose_with_history(prompt: str, history_context: str | None) -> str:
 async def classify_prompt(
     prompt: str,
     router_model: str,
-    ollama_host: str,
+    cfg: AssistantConfig,
     history_context: str | None = None,
 ) -> RouteDecision:
+    zk_hint = (
+        "pesquisar/ler/anotar no Zettelkasten pessoal (~/zk, notas, TODO), "
+        if cfg.zettelkasten.enabled
+        else ""
+    )
+    zk_direct_exclusion = ", notas zk" if cfg.zettelkasten.enabled else ""
+
     system_msg = (
         "Você é um roteador de tarefas rápido. Classifique o pedido ATUAL do usuário em EXATAMENTE uma categoria:\n"
-        "- 'direct': traduções, explicações conceituais, reescrita/resumo de texto já presente na conversa, perguntas que NÃO dependem de ler arquivos locais, notas zk, buscar na internet nem rodar comandos.\n"
-        "- 'terminal': pesquisar/ler/anotar no Zettelkasten pessoal (~/zk, notas, TODO), pesquisar na internet/web, ler páginas/URLs (http/https), rodar comandos no terminal/shell, checar processos, memória, disco, containers podman/docker, rede ou executar git/cli.\n"
+        f"- 'direct': traduções, explicações conceituais, reescrita/resumo de texto já presente na conversa, perguntas que NÃO dependem de ler arquivos locais{zk_direct_exclusion}, buscar na internet nem rodar comandos.\n"
+        f"- 'terminal': {zk_hint}pesquisar na internet/web, ler páginas/URLs (http/https), rodar comandos no terminal/shell, checar processos, memória, disco, containers podman/docker, rede ou executar git/cli.\n"
         "- 'pr_review': revisar Pull Request (local ou remoto pelo número ex: PR #42), code review, analisar git diff/commit ou auditar mudanças recentes de código.\n"
         "- 'coding': criar novos arquivos de código, editar arquivos existentes, implementar funções ou escrever testes unitários.\n"
         "- 'deep': análise arquitetural extensa, auditoria profunda de múltiplos módulos ou investigação complexa sem pressa.\n\n"
@@ -200,16 +206,21 @@ async def classify_prompt(
         tail = history_context[-1500:]
         user_payload = f"[Contexto recente]\n{tail}\n\n[Pedido atual]\n{prompt}"
 
-    async with httpx.AsyncClient(timeout=300.0) as client:
+    async with httpx.AsyncClient(
+        timeout=cfg.inference.ollama_timeout_seconds
+    ) as client:
         resp = await client.post(
-            f"{ollama_host.rstrip('/')}/api/chat",
+            f"{cfg.ollama_host.rstrip('/')}/api/chat",
             json={
                 "model": router_model,
                 "stream": False,
                 "think": False,
-                "keep_alive": "30m",
+                "keep_alive": cfg.inference.router_keep_alive,
                 "format": RouteDecision.model_json_schema(),
-                "options": {"temperature": 0.0, "num_ctx": 4096},
+                "options": {
+                    "temperature": 0.0,
+                    "num_ctx": cfg.inference.router_num_ctx,
+                },
                 "messages": [
                     {"role": "system", "content": system_msg},
                     {"role": "user", "content": user_payload},
@@ -224,25 +235,30 @@ async def classify_prompt(
 async def stream_direct_ollama(
     prompt: str,
     model_name: str,
-    ollama_host: str,
+    cfg: AssistantConfig,
     history_context: str | None = None,
 ) -> AsyncIterator[dict[str, Any]]:
     system_msg = (
         "Você é um assistente técnico conciso, direto e preciso. "
         "Para traduções, entregue a tradução natural preservando termos técnicos quando apropriado. "
-        "Responda sempre no idioma solicitado pelo usuário."
+        f"Responda no idioma solicitado pelo usuário (padrão: {cfg.default_language})."
     )
     full_user = _compose_with_history(prompt, history_context)
-    async with httpx.AsyncClient(timeout=300.0) as client:
+    async with httpx.AsyncClient(
+        timeout=cfg.inference.ollama_timeout_seconds
+    ) as client:
         async with client.stream(
             "POST",
-            f"{ollama_host.rstrip('/')}/api/chat",
+            f"{cfg.ollama_host.rstrip('/')}/api/chat",
             json={
                 "model": model_name,
                 "stream": True,
                 "think": False,
-                "keep_alive": "30m",
-                "options": {"temperature": 0.2, "num_ctx": 16384},
+                "keep_alive": cfg.inference.router_keep_alive,
+                "options": {
+                    "temperature": cfg.inference.direct_temperature,
+                    "num_ctx": cfg.inference.direct_num_ctx,
+                },
                 "messages": [
                     {"role": "system", "content": system_msg},
                     {"role": "user", "content": full_user},
@@ -270,10 +286,21 @@ def build_specialist_config(
     SAVE_DIR.mkdir(parents=True, exist_ok=True)
     APP_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-    web_tools = make_web_tools()
-    zk_tools = make_zk_tools()
-    gh_pr_tools = make_github_pr_tools(cwd)
-    mcp_servers = make_browser_mcp_servers(browser_mcp)
+    web_tools = make_web_tools(cfg) if cfg.features.enable_web_tools else []
+    zk_tools = make_zk_tools(cfg) if cfg.zettelkasten.enabled else []
+    gh_pr_tools = (
+        make_github_pr_tools(cwd, cfg)
+        if cfg.features.enable_github_pr_tools
+        else []
+    )
+    git_tools = make_readonly_git_tools(cwd, cfg.limits.max_diff_chars)
+    mcp_servers = make_browser_mcp_servers(browser_mcp, cfg)
+
+    zk_instruction = (
+        "Para notas pessoais ou TODO do Zettelkasten, use search_zk, read_zk_note e append_zk_todo. "
+        if cfg.zettelkasten.enabled
+        else ""
+    )
 
     if task_type == "pr_review":
         enabled_tools = [
@@ -282,7 +309,7 @@ def build_specialist_config(
             BuiltinTools.SEARCH_DIR,
             BuiltinTools.FIND_FILE,
         ]
-        custom_tools = [*make_readonly_git_tools(cwd), *gh_pr_tools, *web_tools]
+        custom_tools = [*git_tools, *gh_pr_tools, *web_tools]
         task_policies = [policy.allow_all()]
         instructions = (
             f"Você é um Staff Engineer fazendo Code Review no repositório '{cwd}'. "
@@ -303,13 +330,15 @@ def build_specialist_config(
             policy.allow_all(),
             policy.deny(
                 "run_command",
-                when=_is_dangerous_command,
+                when=_make_dangerous_command_predicate(
+                    cfg.guard.dangerous_command_patterns
+                ),
                 name="block_destructive_commands",
             ),
         ]
         instructions = (
-            f"Você é um especialista Linux e assistente pessoal operando em '{cwd}'. "
-            "Para notas pessoais, anotações ou TODO do Zettelkasten (~/zk), use search_zk, read_zk_note e append_zk_todo. "
+            f"Você é um especialista Linux operando em '{cwd}'. "
+            f"{zk_instruction}"
             "Para internet, use web_search e read_webpage. Para o sistema local, use run_command "
             "(nota: ao consultar containers sem TTY via podman/docker exec, não passe '-it')."
         )
@@ -335,11 +364,11 @@ def build_specialist_config(
             BuiltinTools.SEARCH_DIR,
             BuiltinTools.FIND_FILE,
         ]
-        custom_tools = [*make_readonly_git_tools(cwd), *gh_pr_tools, *web_tools, *zk_tools]
+        custom_tools = [*git_tools, *gh_pr_tools, *web_tools, *zk_tools]
         task_policies = [policy.allow_all()]
         instructions = (
             f"Você é um arquiteto de software realizando uma análise técnica profunda em '{cwd}'. "
-            "Explore a estrutura de diretórios, arquivos relevantes e documentações (web_search / read_webpage se necessário) antes de sintetizar sua análise."
+            "Explore a estrutura de diretórios, arquivos relevantes e documentações antes de sintetizar sua análise."
         )
 
     return LocalOpenAIAgentConfig(
@@ -353,7 +382,9 @@ def build_specialist_config(
             enable_subagents=False,
             enabled_tools=enabled_tools,
         ),
-        compaction_config=CompactionConfig(token_threshold=cfg.compaction_tokens),
+        compaction_config=CompactionConfig(
+            token_threshold=cfg.inference.compaction_tokens
+        ),
         tools=custom_tools,
         mcp_servers=mcp_servers,
         policies=task_policies,
@@ -384,32 +415,32 @@ async def plan_turn(
     elif force_task_type is not None:
         task_type = force_task_type
         reason = "perfil selecionado manualmente"
-        estimated_long = task_type == "deep"
+        estimated_long = task_type in cfg.guard.always_confirm_tiers
     else:
         decision = await classify_prompt(
-            prompt, router_model, cfg.ollama_host, history_context=history_context
+            prompt, router_model, cfg, history_context=history_context
         )
         task_type = decision.task_type
         reason = decision.reason
         estimated_long = decision.estimated_long
 
-    target_model = force_model or (
-        router_model if task_type == "direct" else tier_models[task_type]
-    )
+    target_model = force_model or tier_models[task_type]
 
     loaded = await fetch_loaded_models(cfg.ollama_host)
     loaded_names = {m.get("name") for m in loaded if m.get("name")}
     model_already_loaded = target_model in loaded_names
-    is_heavy_model = any(tag in target_model for tag in ("35b", "32b", "31b", "70b"))
+    is_heavy_model = any(
+        tag in target_model for tag in cfg.guard.heavy_model_patterns
+    )
 
     warning_reasons: list[str] = []
-    if task_type == "deep":
-        warning_reasons.append("modo 'deep' (raciocínio estendido / análise profunda)")
+    if task_type in cfg.guard.always_confirm_tiers:
+        warning_reasons.append(f"modo '{task_type}' (análise profunda)")
     if is_heavy_model and not model_already_loaded:
         warning_reasons.append(
-            f"troca para modelo grande '{target_model}' (~21 GB a carregar na RAM/VRAM)"
+            f"troca para modelo grande '{target_model}' (carregamento a frio na RAM/VRAM)"
         )
-    if estimated_long and task_type != "deep":
+    if estimated_long and task_type not in cfg.guard.always_confirm_tiers:
         warning_reasons.append("tarefa estimada como longa / múltiplos passos")
 
     return {
@@ -451,14 +482,12 @@ async def execute_coordinated_turn(
         reason = precomputed_reason or "perfil selecionado manualmente"
     else:
         decision = await classify_prompt(
-            prompt, router_model, cfg.ollama_host, history_context=history_context
+            prompt, router_model, cfg, history_context=history_context
         )
         task_type = decision.task_type
         reason = decision.reason
 
-    target_model = force_model or (
-        router_model if task_type == "direct" else tier_models[task_type]
-    )
+    target_model = force_model or tier_models[task_type]
 
     yield {
         "event": "route",
@@ -470,17 +499,18 @@ async def execute_coordinated_turn(
 
     if task_type == "direct":
         async for ev in stream_direct_ollama(
-            prompt, target_model, cfg.ollama_host, history_context=history_context
+            prompt, target_model, cfg, history_context=history_context
         ):
             yield ev
         yield {"event": "done"}
         return
 
-    loaded = await fetch_loaded_models(cfg.ollama_host)
-    for m in loaded:
-        m_name = m.get("name")
-        if m_name and m_name != target_model:
-            await unload_model(cfg.ollama_host, m_name)
+    if cfg.inference.unload_other_models_on_switch:
+        loaded = await fetch_loaded_models(cfg.ollama_host)
+        for m in loaded:
+            m_name = m.get("name")
+            if m_name and m_name != target_model:
+                await unload_model(cfg.ollama_host, m_name)
 
     full_prompt = _compose_with_history(prompt, history_context)
 

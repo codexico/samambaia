@@ -1,4 +1,4 @@
-"""Remote GitHub Pull Request inspection tools (via `gh` CLI or GitHub REST API)."""
+"""Remote GitHub Pull Request inspection tools with configurable truncation limits."""
 
 from __future__ import annotations
 
@@ -9,6 +9,8 @@ import subprocess
 from typing import Any, Callable
 
 import httpx
+
+from samambaia.config import AssistantConfig, load_config
 
 _GH_REMOTE_RE = re.compile(
     r"github\.com[:/](?P<owner>[A-Za-z0-9_.-]+)/(?P<repo>[A-Za-z0-9_.-]+?)(?:\.git)?$"
@@ -53,7 +55,12 @@ def _gh_headers() -> dict[str, str]:
     return headers
 
 
-def make_github_pr_tools(cwd: str) -> list[Callable[..., Any]]:
+def make_github_pr_tools(
+    cwd: str, cfg: AssistantConfig | None = None
+) -> list[Callable[..., Any]]:
+    active_cfg = cfg or load_config()
+    max_pr_chars = active_cfg.limits.max_pr_diff_chars
+
     def gh_pr_view(pr_number: int, repo: str = "") -> str:
         """Fetches title, author, state, branches, and description of a remote GitHub Pull Request.
 
@@ -125,10 +132,10 @@ def make_github_pr_tools(cwd: str) -> list[Callable[..., Any]]:
             except Exception as exc:
                 return f"Error downloading diff for PR #{pr_number} on {target_repo}: {exc}"
 
-        if len(diff_text) > 26000:
+        if len(diff_text) > max_pr_chars:
             return (
-                diff_text[:26000]
-                + "\n\n[... PR diff truncated at 26k chars ...]"
+                diff_text[:max_pr_chars]
+                + f"\n\n[... PR diff truncated at {max_pr_chars} chars ...]"
             )
         return diff_text or "(Empty PR diff)"
 

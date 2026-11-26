@@ -4,10 +4,16 @@
   "public_webui_url": "http://samambaia.localhost:8080",
   "daemon_host": "127.0.0.1",
   "daemon_port": 8765,
-  "compaction_tokens": 24576,
-  "zk_todo_file": "TODO.md",
+  "default_language": "Português do Brasil",
+  "ollama_container_name": "ollama",
+  "openwebui_container_name": "open-webui",
+  "kde_selection_shortcut": "Meta+Alt+T",
   "model_preferences": {
     "router": [
+      "gemma4:e4b",
+      "gemma4:26b"
+    ],
+    "direct": [
       "gemma4:e4b",
       "gemma4:26b"
     ],
@@ -29,5 +35,65 @@
       "qwen3.5:35b-a3b",
       "gemma4:26b"
     ]
+  },
+  "inference": {
+    "unload_other_models_on_switch": true,
+    "router_keep_alive": "30m",
+    "router_num_ctx": 4096,
+    "direct_num_ctx": 16384,
+    "direct_temperature": 0.2,
+    "compaction_tokens": 24576,
+    "ollama_timeout_seconds": 300.0
+  },
+  "guard": {
+    "always_confirm_tiers": [
+      "deep"
+    ],
+    "heavy_model_patterns": [
+      "35b",
+      "32b",
+      "31b",
+      "70b"
+    ],
+    "dangerous_command_patterns": [
+      "rm -rf /",
+      "rm -fr /",
+      "mkfs",
+      "dd if=",
+      ":(){",
+      "chmod -R 777 /",
+      "> /dev/sd",
+      "> /dev/nvme"
+    ]
+  },
+  "limits": {
+    "max_session_turns": 20,
+    "max_history_chars": 12000,
+    "max_diff_chars": 24000,
+    "max_pr_diff_chars": 26000,
+    "max_webpage_chars": 22000,
+    "web_search_default_results": 5
+  },
+  "features": {
+    "enable_web_tools": true,
+    "enable_github_pr_tools": true,
+    "chrome_mcp_args": [
+      "-y",
+      "chrome-devtools-mcp@latest"
+    ],
+    "firefox_mcp_args": [
+      "-y",
+      "@playwright/mcp@latest",
+      "--browser",
+      "firefox"
+    ]
+  },
+  "zettelkasten": {
+    "enabled": false,
+    "directory": "~/zk",
+    "todo_file": "TODO.md",
+    "openwebui_collection_name": "zk",
+    "sync_interval": "10min",
+    "max_note_chars": 22000
   }
 }

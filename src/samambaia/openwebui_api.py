@@ -194,7 +194,7 @@ async def chat_completions(request: Request):
         if wants_stream:
             async def _title_stream() -> AsyncIterator[str]:
                 async for ev in stream_direct_ollama(
-                    last_user, router_model, cfg.ollama_host
+                    last_user, router_model, cfg
                 ):
                     yield _sse_chunk(cid, model_id, text=ev["text"])
                 yield _sse_chunk(cid, model_id, finish="stop")
@@ -204,7 +204,7 @@ async def chat_completions(request: Request):
 
         chunks: list[str] = []
         async for ev in stream_direct_ollama(
-            last_user, router_model, cfg.ollama_host
+            last_user, router_model, cfg
         ):
             chunks.append(ev["text"])
         return _instant_reply(model_id, "".join(chunks), stream=False)
